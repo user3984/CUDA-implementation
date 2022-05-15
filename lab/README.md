@@ -20,7 +20,7 @@
 
 ### 实验流程图
 
-![](/imgs/Lab3-flow.png "Lab3 flow chat")
+![](../img/flow.png "Lab flow chat")
 
 ### 具体步骤
 
@@ -31,9 +31,9 @@
 3.	实现CUDA版本的定制化张量运算
 
     1. 编写.cu文件，实现矩阵相乘的kernel
-   
+      
     2. 在上述.cu文件中，编写使用cuda进行前向计算和反向传播的函数
-   
+      
     3. 基于C++ API，编写.cpp文件，调用上述函数，实现Linear张量运算的前向计算和反向传播。
 
     4. 将代码生成python的C++扩展
