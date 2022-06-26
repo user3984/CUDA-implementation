@@ -52,9 +52,9 @@
 
 ||||
 |--------|--------------|--------------------------|
-|硬件环境|CPU（vCPU数目）|&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; |
-||GPU(型号，数目)||
-|软件环境|OS版本||
+|硬件环境|CPU（vCPU数目）|Intel(R) Xeon(R) E5-2680 v4 |
+||GPU(型号，数目)|NVIDIA GeForce RTX 2060|
+|软件环境|OS版本|Ubuntu 20.04.3 LTS|
 ||深度学习框架<br>python包名称及版本||
 ||CUDA版本||
 ||||
