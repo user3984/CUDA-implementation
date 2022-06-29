@@ -1,6 +1,6 @@
 ---
 
-typora-copy-images-to: ..\img
+typora-copy-images-to: ../img
 typora-root-url: ./
 ---
 
@@ -222,27 +222,27 @@ __global__ void matmul_kernel(
     const int blockRow = threadIdx.x;
     const int blockCol = threadIdx.y;
 
-    if (row < M && col < N) {
-        __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
-        __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
+    __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
+    __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
 
-        int val = 0;
+    int val = 0;
 
-        for (int s = 0; s < K; s += BLOCK_SIZE) {
-            As[blockRow][blockCol] = (s + blockCol < K) ? (trans_A ? A[(s + blockCol) * K + row] : A[row * K + s + blockCol]) : 0;
-            Bs[blockRow][blockCol] = (s + blockRow < K) ? (trans_B ? B[col * N + s + blockRow] : B[(s + blockRow) * N + col]) : 0;
+    for (int s = 0; s < K; s += BLOCK_SIZE) {
+        As[blockRow][blockCol] = (row < M && s + blockCol < K) ? (trans_A ? A[(s + blockCol) * K + row] : A[row * K + s + blockCol]) : 0;
+        Bs[blockRow][blockCol] = (col < N && s + blockRow < K) ? (trans_B ? B[col * N + s + blockRow] : B[(s + blockRow) * N + col]) : 0;
 
-            __syncthreads();  // make sure sub-matrices are loaded
+        __syncthreads();  // make sure sub-matrices are loaded
 
-            for (int k = 0; k < BLOCK_SIZE; ++k) {
-                val += As[blockRow][k] * Bs[k][blockCol];
-            }
-
-            // make sure that the preceding computation is done before loading
-            // two new sub-matrices of A and B in the next iteration
-            __syncthreads();
+        for (int k = 0; k < BLOCK_SIZE; ++k) {
+            val += As[blockRow][k] * Bs[k][blockCol];
         }
 
+        // make sure that the preceding computation is done before loading
+        // two new sub-matrices of A and B in the next iteration
+        __syncthreads();
+    }
+
+    if (row < M && col < N) {
         C[row * N + col]  = val;
     }
 
@@ -253,16 +253,16 @@ __global__ void matmul_kernel(
 
 ```
 root@container-377e11abac-d9186d76:~/CUDA-implementation/lab/mylinear_cuda_extension# nvprof ./test
-==2129== NVPROF is profiling process 2129, command: ./test
+==51618== NVPROF is profiling process 51618, command: ./test
 Error: 0
-==2129== Profiling application: ./test
-==2129== Profiling result:
+==51618== Profiling application: ./test
+==51618== Profiling result:
             Type  Time(%)      Time     Calls       Avg       Min       Max  Name
- GPU activities:  100.00%  15.717ms         1  15.717ms  15.717ms  15.717ms  void matmul_kernel<float>(float const *, float const *, float*, int, int, int, bool, bool)
+ GPU activities:  100.00%  15.611ms         1  15.611ms  15.611ms  15.611ms  void matmul_kernel<float>(float const *, float const *, float*, int, int, int, bool, bool)
 ...
 ```
 
-可以看到，kernel 的执行时间由 39.536ms 减少到 15.717ms。
+可以看到，kernel 的执行时间由 39.536ms 减少到 15.611ms。
 
 
 
