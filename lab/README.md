@@ -95,6 +95,56 @@ typora-root-url: ./
 
 ### 实验结果
 
+使用以下代码测试矩阵乘法 kernel 的性能：
+
+```c++
+int main()
+{
+    float *input, *weights, *output;
+
+    const int M = 1 << 10;
+    const int K = 1 << 10;
+    const int N = 1 << 10;
+
+    cudaMallocManaged(&input, M * K * sizeof(float));
+    cudaMallocManaged(&weights, K * N * sizeof(float));
+    cudaMallocManaged(&output, M * N * sizeof(float));
+
+    int sz_input = M * K;
+    int sz_weights = K * N;
+    int sz_output = M * N;
+
+    // initialize input, weights and output
+    for (int i = 0; i < sz_input; ++i) {
+        input[i] = 1.0f;
+    }
+
+    for (int i = 0; i < sz_weights; ++i) {
+        weights[i] = 2.0f;
+    }
+
+    for (int i = 0; i < sz_output; ++i) {
+        output[i] = 0.0f;
+    }
+
+    const dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
+    const dim3 numBlocks((M - 1) / BLOCK_SIZE + 1, (N - 1) / BLOCK_SIZE + 1);
+    matmul_kernel<<<numBlocks, threadsPerBlock>>>(input, weights, output, M, K, N);
+
+    // Wait for GPU to finish before accessing on host
+    cudaDeviceSynchronize();
+
+    float error = 0.0f;
+    for (int i = 0; i < sz_output; ++i) {
+        error += abs(output[i] - 2.0f * K);
+    }
+
+    std::cout << "Error: " << error << std::endl;
+    
+    return 0;
+}
+```
+
 原始代码：
 
 ```c++
@@ -142,6 +192,10 @@ Error: 0
 效率低的原因：访问 global memory，时间开销大。
 
 优化：将每个 block 需要用到的数据加载到 shared memory 中。
+
+使用 `__shared__` 在 shared memory 中保存分块矩阵 `As` 和 `Bs`，分块的大小为 BLOCK_SIZE * BLOCK_SIZE，如下图所示：
+
+![Matrix Multiplication with Shared Memory.](/../img/matrix-multiplication-with-shared-memory.png)
 
 每个 thread 总 global memory 访问次数
 
@@ -208,9 +262,7 @@ Error: 0
 ...
 ```
 
-
-
-> Threads within a block can cooperate by sharing data through some shared memory and by synchronizing their execution to coordinate memory accesses. More precisely, one can specify synchronization points in the kernel by calling the __syncthreads() intrinsic function; __syncthreads() acts as a barrier at which **all threads in the block must wait before any is allowed to proceed**. 
+可以看到，kernel 的执行时间由 39.536ms 减少到 15.717ms。
 
 
 
