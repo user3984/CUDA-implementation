@@ -52,27 +52,27 @@ __global__ void matmul_kernel(
     const int blockRow = threadIdx.x;
     const int blockCol = threadIdx.y;
 
-    if (row < M && col < N) {
-        __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
-        __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
+    __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
+    __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
 
-        int val = 0;
+    int val = 0;
 
-        for (int s = 0; s < K; s += BLOCK_SIZE) {
-            As[blockRow][blockCol] = (s + blockCol < K) ? (trans_A ? A[(s + blockCol) * K + row] : A[row * K + s + blockCol]) : 0;
-            Bs[blockRow][blockCol] = (s + blockRow < K) ? (trans_B ? B[col * N + s + blockRow] : B[(s + blockRow) * N + col]) : 0;
+    for (int s = 0; s < K; s += BLOCK_SIZE) {
+        As[blockRow][blockCol] = (row < M && s + blockCol < K) ? (trans_A ? A[(s + blockCol) * K + row] : A[row * K + s + blockCol]) : 0;
+        Bs[blockRow][blockCol] = (col < N && s + blockRow < K) ? (trans_B ? B[col * N + s + blockRow] : B[(s + blockRow) * N + col]) : 0;
 
-            __syncthreads();  // make sure sub-matrices are loaded
+        __syncthreads();  // make sure sub-matrices are loaded
 
-            for (int k = 0; k < BLOCK_SIZE; ++k) {
-                val += As[blockRow][k] * Bs[k][blockCol];
-            }
-
-            // make sure that the preceding computation is done before loading
-            // two new sub-matrices of A and B in the next iteration
-            __syncthreads();
+        for (int k = 0; k < BLOCK_SIZE; ++k) {
+            val += As[blockRow][k] * Bs[k][blockCol];
         }
 
+        // make sure that the preceding computation is done before loading
+        // two new sub-matrices of A and B in the next iteration
+        __syncthreads();
+    }
+
+    if (row < M && col < N) {
         C[row * N + col]  = val;
     }
 
@@ -82,9 +82,9 @@ int main()
 {
     float *input, *weights, *output;
 
-    const int M = 1 << 10;
-    const int K = 1 << 10;
-    const int N = 1 << 10;
+    const int M = 1024;
+    const int K = 1024;
+    const int N = 1024;
 
     cudaMallocManaged(&input, M * K * sizeof(float));
     cudaMallocManaged(&weights, K * N * sizeof(float));
