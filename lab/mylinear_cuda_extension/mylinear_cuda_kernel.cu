@@ -26,7 +26,7 @@
 #include <cuda_runtime.h>
 
 #include <vector>
-#define BLOCK_SIZE 32
+#define BLOCK_SIZE 16
 
 template <typename scalar_t>
 __global__ void matmul_kernel(
