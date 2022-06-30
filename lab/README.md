@@ -104,11 +104,10 @@ typora-root-url: ./
 Linear 模块的核心，实际上就是矩阵的乘法运算，即 `matmul_kernel` 的实现。要利用 CUDA 实现矩阵的乘法运算，最直接的想法就是让每一个线程负责结果矩阵中的一个元素的计算。根据矩阵乘法的定义，矩阵 A 与 B 相乘，结果矩阵中的每个元素是 A 中的对应行与 B 中的对应列的乘累和。另外，由于 block 的大小不一定是矩阵的 size 的整数倍，分配的线程可能多于实际结果矩阵中的元素个数，因此需要进行越界判断。根据上述思路，实现如下：
 
 ```c++
-template <typename scalar_t>
 __global__ void matmul_kernel(
-    const scalar_t* A,
-    const scalar_t* B,
-    scalar_t* C,
+    const float* A,
+    const float* B,
+    float* C,
     const int M, 
     const int K, 
     const int N,
@@ -119,7 +118,7 @@ __global__ void matmul_kernel(
     const int col = blockIdx.y * blockDim.y + threadIdx.y;
     if (row < M && col < N)
     {
-        scalar_t sum = 0.0;
+        float sum = 0.0;
         for (int k = 0; k < K; k++)
         {
             const int i = trans_A ? (k * M + row) : (row * K + k);
@@ -216,11 +215,10 @@ Error: 0
 优化后代码如下：
 
 ```C++
-template <typename scalar_t>
 __global__ void matmul_kernel(
-    const scalar_t* A,
-    const scalar_t* B,
-    scalar_t* C,
+    const float* A,
+    const float* B,
+    float* C,
     const int M, 
     const int K, 
     const int N,
@@ -290,11 +288,10 @@ for (int k = 0; k < BLOCK_SIZE; ++k) {
 为了实现一次传输 4 个浮点数，首先要将 `Bs` 转置，将子矩阵元素从 Global Memory 中的 `b` 读入 `Bs` 时的行列标对换，从而使原本同一列的数据的地址相邻，便于一次传输。在代码中，将 float 指针用 `reinterpret_cast` 转换为 CUDA 内建的 float4 类型指针，实现 4 个 float 型数据一并传输。 
 
 ```c++
-template <typename scalar_t>
 __global__ void matmul_kernel(
-    const scalar_t* A,
-    const scalar_t* B,
-    scalar_t* C,
+    const float* A,
+    const float* B,
+    float* C,
     const int M, 
     const int K, 
     const int N,
@@ -357,21 +354,21 @@ Error: 0
 
 #### MNIST 数据集上的性能测试
 
+
+
 | 实现方式（Linear层为例）| 性能评测                                                     |
 |---------------|---------------------------|
 |CPU only|Time: 286.77 s (1 epoch) |
 |With CUDA (使用 `nn.Linear`)|Time: 17.50 s (1 epoch)<br />Test set: Average loss: 0.0285, Accuracy: 9913/10000 (99%)|
 |With CUDA (使用自定义的 Linear 层)|Time: 17.54 s (1 epoch)<br />Test set: Average loss: 0.0257, Accuracy: 9916/10000 (99%)|
 
-## 参考代码
+## 运行命令
 
-代码位置：`Lab3/mnist_custom_linear_cuda.py`
-
-运行命令：
 ```
 cd mylinear_cuda_extension
 python setup install --user
-cd ..& python mnist_custom_linear_cuda.p
+cd ..
+python mnist_custom_linear_cuda.py
 ```
 
 ## 参考资料
