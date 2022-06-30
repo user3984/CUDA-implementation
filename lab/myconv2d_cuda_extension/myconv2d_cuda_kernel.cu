@@ -1,24 +1,3 @@
-// MIT License
-
-// Copyright (c) Microsoft Corporation.
-
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE
 
 #include <torch/extension.h>
 
@@ -29,13 +8,14 @@
 #define BLOCK_SIZE 32
 
 template <typename scalar_t>
-__global__ void matmul_kernel(
+__global__ void conv2d_kernel(
     const scalar_t* A,
     const scalar_t* B,
     scalar_t* C,
-    const int M, 
-    const int K, 
+    const int M,
     const int N,
+    const int ksize, 
+    const int stride,
     const bool trans_A = false,
     const bool trans_B = false) 
 {
@@ -83,7 +63,7 @@ std::vector<torch::Tensor> mylinear_cuda_forward(
     const dim3 grid((M - 1) / BLOCK_SIZE + 1, (N - 1) / BLOCK_SIZE + 1);
 
     AT_DISPATCH_FLOATING_TYPES(input.type(), "mylinear_cuda_forward", ([&] {
-        matmul_kernel<scalar_t><<<grid, block>>>(
+        conv2d_kernel<scalar_t><<<grid, block>>>(
             input.data<scalar_t>(),
             weights.data<scalar_t>(),
             output.data<scalar_t>(),
@@ -115,7 +95,7 @@ std::vector<torch::Tensor> mylinear_cuda_backward(
 
 
     AT_DISPATCH_FLOATING_TYPES(input.type(), "mylinear_cuda_backward_input", ([&] {
-        matmul_kernel<scalar_t><<<grid1, block>>>(
+        conv2d_kernel<scalar_t><<<grid1, block>>>(
             grad_output.data<scalar_t>(),
             weights.data<scalar_t>(),
             grad_input.data<scalar_t>(),
@@ -127,7 +107,7 @@ std::vector<torch::Tensor> mylinear_cuda_backward(
         }));
 
     AT_DISPATCH_FLOATING_TYPES(input.type(), "mylinear_cuda_backward_input", ([&] {
-        matmul_kernel<scalar_t><<<grid2, block>>>(
+        conv2d_kernel<scalar_t><<<grid2, block>>>(
             grad_output.data<scalar_t>(),
             input.data<scalar_t>(),
             grad_weights.data<scalar_t>(),

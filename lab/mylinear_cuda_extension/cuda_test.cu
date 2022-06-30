@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#define BLOCK_SIZE 32
+#define BLOCK_SIZE 16
 
 // template <typename scalar_t>
 // __global__ void matmul_kernel(
@@ -52,19 +52,19 @@ __global__ void matmul_kernel(
     const int blockRow = threadIdx.x;
     const int blockCol = threadIdx.y;
 
-    __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
-    __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
+    __shared__ float As[BLOCK_SIZE * BLOCK_SIZE];
+    __shared__ float Bs[BLOCK_SIZE * BLOCK_SIZE];
 
-    int val = 0;
+    float val = 0.0f;
 
     for (int s = 0; s < K; s += BLOCK_SIZE) {
-        As[blockRow][blockCol] = (row < M && s + blockCol < K) ? (trans_A ? A[(s + blockCol) * K + row] : A[row * K + s + blockCol]) : 0;
-        Bs[blockRow][blockCol] = (col < N && s + blockRow < K) ? (trans_B ? B[col * N + s + blockRow] : B[(s + blockRow) * N + col]) : 0;
+        As[blockRow * BLOCK_SIZE + blockCol] = (row < M && s + blockCol < K) ? (trans_A ? A[(s + blockCol) * K + row] : A[row * K + s + blockCol]) : 0;
+        Bs[blockRow * BLOCK_SIZE + blockCol] = (col < N && s + blockRow < K) ? (trans_B ? B[col * N + s + blockRow] : B[(s + blockRow) * N + col]) : 0;
 
         __syncthreads();  // make sure sub-matrices are loaded
 
         for (int k = 0; k < BLOCK_SIZE; ++k) {
-            val += As[blockRow][k] * Bs[k][blockCol];
+            val += As[blockRow * BLOCK_SIZE + k] * Bs[k * BLOCK_SIZE + blockCol];
         }
 
         // make sure that the preceding computation is done before loading
@@ -75,8 +75,58 @@ __global__ void matmul_kernel(
     if (row < M && col < N) {
         C[row * N + col]  = val;
     }
-
 }
+
+
+// use Vectorized Memory Access
+// template <typename scalar_t>
+// __global__ void matmul_kernel(
+//     const scalar_t* A,
+//     const scalar_t* B,
+//     scalar_t* C,
+//     const int M, 
+//     const int K, 
+//     const int N,
+//     const bool trans_A = false,
+//     const bool trans_B = false) 
+// {
+//     const int row = blockIdx.x * blockDim.x + threadIdx.x;
+//     const int col = blockIdx.y * blockDim.y + threadIdx.y;
+//     const int blockRow = threadIdx.x;
+//     const int blockCol = threadIdx.y;
+
+//     __shared__ float As[BLOCK_SIZE * BLOCK_SIZE];
+//     __shared__ float Bs[BLOCK_SIZE * BLOCK_SIZE];
+
+//     float Ar[4], Br[4];  // registers
+
+//     float val = 0.0f;
+
+//     for (int s = 0; s < K; s += BLOCK_SIZE) {
+//         As[blockRow * BLOCK_SIZE + blockCol] = (row < M && s + blockCol < K) ? (trans_A ? A[(s + blockCol) * K + row] : A[row * K + s + blockCol]) : 0;
+//         Bs[blockCol * BLOCK_SIZE + blockRow] = (col < N && s + blockRow < K) ? (trans_B ? B[col * N + s + blockRow] : B[(s + blockRow) * N + col]) : 0;
+
+//         __syncthreads();  // make sure sub-matrices are loaded
+
+//         for (int k = 0; k < BLOCK_SIZE; k += 4) {
+//             *(reinterpret_cast<float4*>(Ar)) = *(reinterpret_cast<float4*>(As + blockRow * BLOCK_SIZE + k));
+//             *(reinterpret_cast<float4*>(Br)) = *(reinterpret_cast<float4*>(Bs + blockCol * BLOCK_SIZE + k));
+
+//             #pragma unroll 4
+//             for (int i = 0; i < 4; ++i) {
+//                 val += Ar[i] * Br[i];
+//             }
+//         }
+
+//         // make sure that the preceding computation is done before loading
+//         // two new sub-matrices of A and B in the next iteration
+//         __syncthreads();
+//     }
+
+//     if (row < M && col < N) {
+//         C[row * N + col]  = val;
+//     }
+// }
 
 int main()
 {
