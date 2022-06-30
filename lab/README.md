@@ -91,7 +91,7 @@ typora-root-url: ./
 ||||
 |--------|--------------|--------------------------|
 |硬件环境|CPU（vCPU数目）|Intel(R) Xeon(R) E5-2680 v4 |
-||GPU(型号，数目)|NVIDIA GeForce RTX 2060|
+||GPU(型号，数目)|NVIDIA Titan Xp|
 |软件环境|OS版本|Ubuntu 20.04.3 LTS|
 ||深度学习框架<br>python包名称及版本|PyTorch 1.10.0|
 ||CUDA版本|11.3|
@@ -355,12 +355,13 @@ Error: 0
 
 可以看到，使用向量化访存优化后，性能得到了进一步的提高。
 
-|||
+#### MNIST 数据集上的性能测试
+
+| 实现方式（Linear层为例）| 性能评测                                                     |
 |---------------|---------------------------|
-| 实现方式（Linear层为例）| &nbsp; &nbsp; &nbsp; &nbsp; 性能评测 |
-|<br/> <br/>CPU only<br/> <br/>&nbsp;|&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; |
-|<br/> <br/>With CUDA<br/> <br/>&nbsp;||
-||||
+|CPU only|Time: 286.77 s (1 epoch) |
+|With CUDA (使用 `nn.Linear`)|Time: 17.50 s (1 epoch)<br />Test set: Average loss: 0.0285, Accuracy: 9913/10000 (99%)|
+|With CUDA (使用自定义的 Linear 层)|Time: 17.54 s (1 epoch)<br />Test set: Average loss: 0.0257, Accuracy: 9916/10000 (99%)|
 
 ## 参考代码
 
