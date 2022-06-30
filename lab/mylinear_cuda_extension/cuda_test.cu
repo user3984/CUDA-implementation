@@ -52,10 +52,10 @@ __global__ void matmul_kernel(
     const int blockRow = threadIdx.x;
     const int blockCol = threadIdx.y;
 
-    __shared__ float As[BLOCK_SIZE * BLOCK_SIZE];
-    __shared__ float Bs[BLOCK_SIZE * BLOCK_SIZE];
+    __shared__ scalar_t As[BLOCK_SIZE * BLOCK_SIZE];
+    __shared__ scalar_t Bs[BLOCK_SIZE * BLOCK_SIZE];
 
-    float val = 0.0f;
+    scalar_t val = 0.0;
 
     for (int s = 0; s < K; s += BLOCK_SIZE) {
         As[blockRow * BLOCK_SIZE + blockCol] = (row < M && s + blockCol < K) ? (trans_A ? A[(s + blockCol) * K + row] : A[row * K + s + blockCol]) : 0;
